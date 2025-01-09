@@ -1,0 +1,19 @@
+{
+  "name": "ax",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest",
+    "build": "esbuild src/index.ts --bundle --outfile=dist/index.js --platform=node"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20231218.0",
+    "typescript": "^5.3.3",
+    "wrangler": "^3.60.3"
+  },
+  "dependencies": {
+    "twitter-api-v2": "^1.19.0"
+  }
+}

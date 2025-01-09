@@ -1,168 +1,172 @@
-# Farcaster Agent Template
+# agent-template
 
-This template provides a foundation for building your own Farcaster agent using Cloudflare Workers. It includes a built-in memory system, character customization, and an extensible action framework.
-
-## Prerequisites
-
-- [Neynar](https://neynar.com) developer account
-- [Cloudflare](https://cloudflare.com) account
-- [OpenRouter](https://openrouter.ai) account
-- Node.js and npm installed
+A powerful serverless AI agent template for Cloudflare Workers that supports multiple platforms (Twitter, Telegram, Farcaster) with built-in memory management and LLM integration.
 
 ## Quick Start
 
-1. **Create a new Cloudflare Worker project**
-```bash
-npm create cloudflare@latest my-farcaster-agent
-cd my-farcaster-agent
-```
-
-2. **Copy Template Files**
-- Copy all contents from this template directory into your worker's `src` directory
-
-3. **Install Dependencies**
-```bash
-npm install
-```
-
-## Configuration
-
-### 1. Create wrangler.toml
-
-Create a `wrangler.toml` file in your project root:
-
-```toml
-name = "farcaster-agent"
-main = "src/index.js"
-compatibility_date = "2023-01-01"
-node_compat = true
-
-[vars]
-FARCASTER_FID = "your_fid"
-FARCASTER_NEYNAR_SIGNER_UUID = "your_signer_uuid"
-FARCASTER_NEYNAR_API_KEY = "your_neynar_key"
-OPENROUTER_API_KEY = "your_openrouter_key"
-
-# KV namespace binding
-[[kv_namespaces]]
-binding = "AGENT_KV"
-id = "your_kv_namespace_id"
-```
-
-### 2. Set Up Cloudflare KV
+Create a new project using this template:
 
 ```bash
-# Create the KV namespace
+npm create cloudflare@latest -- my-first-worker --template 0xkoda/fagent
+```
+
+## Initial Setup
+
+If you are using cursor or windsurf, or another AI enabled code editor, you may benefit from [cursor rules](cursorrules.md).
+
+### Platform Configuration
+
+1. **Twitter Setup**
+   -  **API-based Authentication**:
+        - Set `ENABLE_TWITTER=true` in wrangler.toml
+        - Add Twitter API credentials:
+        ```bash
+        npx wrangler secret put TWITTER_API_KEY
+        npx wrangler secret put TWITTER_API_SECRET
+        npx wrangler secret put TWITTER_ACCESS_TOKEN
+        npx wrangler secret put TWITTER_ACCESS_SECRET
+        ```
+
+2. **Telegram Setup**
+   - Create a new bot through [@BotFather](https://t.me/botfather)
+   - Record the bot token for later use
+   - After deployment, set webhook: `curl -F "url=https://your-worker-url/telegram" https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook`
+
+3. **Farcaster Setup**
+   - Create/login to [Neynar account](https://neynar.com)
+   - Generate a signer UUID in the dashboard
+   - Create a new agent account if needed (can be done from dashboard)
+   - Record your API key and signer UUID
+
+### KV Storage Setup
+
+1. Create the KV namespace:
+```bash
 npx wrangler kv:namespace create AGENT_KV
 ```
 
-Add the returned KV namespace ID to your `wrangler.toml`.
-
-### 3. Configure Your Agent's Character
-
-Edit `src/config/character.json` to define your agent's personality:
-
-```json
-{
-  "name": "YourAgent",
-  "bio": [
-    "A knowledgeable AI agent on Farcaster",
-    "Specializes in [your specialty]"
-  ],
-  "style": {
-    "tone": [
-      "friendly but professional",
-      "technically accurate"
-    ],
-    "writing_style": [
-      "use clear explanations",
-      "maintain conversation context"
-    ]
-  },
-  "system_prompt": "You are [name], [key characteristics]..."
-}
+2. Add the returned values to your `wrangler.toml`:
+```toml
+# KV namespace for agent memory
+[[kv_namespaces]]
+binding = "agent_memory"
+id = ""        # Add your KV namespace ID here
+preview_id = "" # Add your preview ID here
 ```
 
-### 4. Set Up Neynar Webhook
+## Features
 
-1. Create a Farcaster account through Neynar's API
-2. Deploy your worker: `npx wrangler deploy`
-3. In the Neynar dashboard:
-   - Go to the webhooks tab
-   - Create a new webhook
-   - Enter your worker URL
-   - Add your bot's FID to both `mentioned_fids` and `parent_author_fids`
-
-## Creating Custom Actions
-
-The agent uses an extensible action system. Here's how to add your own action:
-
-1. Create a new file in the `actions` directory (e.g., `myaction.js`):
-```javascript
-import { BaseAction } from './base';
-
-export class MyAction extends BaseAction {
-  constructor() {
-    super('myaction'); // Command name users will type
-  }
-
-  async execute(cast, context) {
-    // Your action logic here
-    return {
-      success: true,
-      response: "Action completed!"
-    };
-  }
-}
-```
-
-2. Register your action in `actions/index.js`:
-```javascript
-import { MyAction } from './myaction';
-
-const actions = {
-  myaction: new MyAction()
-};
-
-export function loadActions() {
-  return actions;
-}
-```
+- Multi-platform support (Twitter, Telegram, Farcaster)
+- Twitter posts only (no replies or slop)
+- Two-tier memory system with Cloudflare KV (long and short-term memory)
+- Custom action system for handling commands
+- Scheduled jobs support
+- Open Router LLM integration for intelligent responses
 
 ## Memory System
 
-The agent includes a two-tier memory system:
-- Conversation Memory: 24-hour TTL
-- Long-term Memory: 30-day TTL
+The agent includes a sophisticated two-tier memory system:
+
+- **Conversation Memory**: 24-hour TTL for recent interactions
+- **Long-term Memory**: 30-day TTL for persistent knowledge
 
 Memory is automatically managed through Cloudflare KV.
 
-## Development Tips
+## Configuration
 
-- Test locally with `npx wrangler dev`
-- Monitor logs with `npx wrangler tail`
-- Use environment variables for all sensitive keys
-- Start with simple actions and gradually add complexity
+### 1. Character Setup
 
-## Environment Variables
+Create your agent's persona in `./config/character.json`. This defines your agent's personality and behavior.
 
-Required environment variables:
-- `FARCASTER_FID`: Your Farcaster ID
-- `FARCASTER_NEYNAR_SIGNER_UUID`: UUID from Neynar dashboard
-- `FARCASTER_NEYNAR_API_KEY`: Neynar API key
-- `OPENROUTER_API_KEY`: OpenRouter API key
+### 2. Actions
 
-## Deployment
+1. Register new actions in the `/actions` directory
+2. Add your action to `./actions/index.ts`
+
+### 3. Secrets Management
+
+Add required secrets using wrangler:
 
 ```bash
-# Deploy your worker
-npx wrangler deploy
-
-# Set environment variables
+# Add platform-specific secrets
+npx wrangler secret put TELEGRAM_BOT_TOKEN
 npx wrangler secret put FARCASTER_NEYNAR_API_KEY
+npx wrangler secret put FARCASTER_NEYNAR_SIGNER_UUID
+npx wrangler secret put FARCASTER_FID
+npx wrangler secret put TWITTER_API_KEY
+npx wrangler secret put TWITTER_API_SECRET
+npx wrangler secret put TWITTER_ACCESS_TOKEN
+npx wrangler secret put TWITTER_ACCESS_SECRET
+
+# Add LLM API key
 npx wrangler secret put OPENROUTER_API_KEY
 ```
 
-## License
+### 4. LLM Configuration
 
-MIT License
+This template uses [OpenRouter](https://openrouter.ai/models) to access various LLM models. OpenRouter provides a unified API to access models from different providers including OpenAI, Anthropic, and others.
+
+1. Get your API key from [OpenRouter](https://openrouter.ai/)
+2. Add the API key to your secrets:
+```bash
+npx wrangler secret put OPENROUTER_API_KEY
+```
+
+3. Configure your preferred model in `wrangler.toml`:
+```toml
+[vars]
+LLM_MODEL = "openai/gpt-3.5-turbo"  # Model to use for LLM responses
+```
+
+Available models can be found in the [OpenRouter documentation](https://openrouter.ai/models).
+
+### 5. Wrangler Configuration
+
+Configure platform settings in `wrangler.toml`:
+
+```toml
+[vars]
+ENABLE_FARCASTER = true         # Enable/disable Farcaster
+ENABLE_TELEGRAM = true          # Enable/disable Telegram
+ENABLE_TWITTER = false          # Enable Twitter API client
+```
+
+## Creating Scheduled Jobs
+Scheduled jobs can define how your agent interfaces with social clients, like regular posts.
+Scheduled jobs can perform an action or group of actions. 
+
+The agent supports scheduled jobs through the `scheduler.ts` and `scheduled.ts` files in the `src/jobs` directory. 
+
+For detailed examples and implementation details, see the [Creating Scheduled Jobs](docs.md#creating-scheduled-jobs) section in the documentation.
+
+3. Configure the cron schedule in `wrangler.toml`:
+```toml
+[triggers]
+crons = ["30 12 * * *"]  # Runs at 12:30 UTC daily
+```
+
+## Deployment
+
+1. **Character Refinement**
+Define your character in ./config/character.json
+
+2. **Deploy Your Worker**
+```bash
+npx wrangler deploy
+```
+
+3. **Post-Deployment**
+   - Configure Telegram webhook with your worker URL
+   - Set up Neynar webhook in the dashboard with your worker URL
+   - Test your bot's functionality on both platforms
+   - Add any custom actions
+   - Add any scheduled jobs (see [Creating Scheduled Jobs](#creating-scheduled-jobs))
+
+## Roadmap
+
+- [ ] Enhance memory system with vectorDB
+- [ ] Add more platform integrations
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.

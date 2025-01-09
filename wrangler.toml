@@ -1,0 +1,37 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "agent-template"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Configure module bundling rules
+rules = [
+  { type = "ESModule", globs = ["**/*.js"], fallthrough = true }
+]
+
+# Environment variables (not secrets)
+[vars]
+ENABLE_TELEGRAM = true
+ENABLE_FARCASTER = true
+ENABLE_TWITTER = false   # Twitter API
+LLM_MODEL = "openai/gpt-3.5-turbo"  # Model to use for LLM responses
+
+# Cron Triggers
+[triggers]
+# crons = [
+#  "0 */6 * * *",  # radnom action: 00:00, 06:00, 12:00, 18:00 UTC
+# ]
+
+# Workers Logs
+[observability]
+enabled = true
+
+# Build configuration
+[build]
+command = "npm run build"
+
+# KV namespace for agent memory
+[[kv_namespaces]]
+# binding = "agent_memory"
+# id = ""
+# preview_id = ""
