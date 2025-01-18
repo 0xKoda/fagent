@@ -9,12 +9,14 @@
 
 export interface Env {
   // KV Namespace for agent memory
-  agent_memory?: KVNamespace;
+  KV: KVNamespace;
+  agent_memory: KVNamespace;
 
   // Feature flags
-  ENABLE_TELEGRAM: string | boolean;
-  ENABLE_FARCASTER: string | boolean;
-  ENABLE_TWITTER: string | boolean;
+  ENABLE_TELEGRAM: boolean | string;
+  ENABLE_FARCASTER: boolean | string;
+  ENABLE_TWITTER: boolean | string;
+
   LLM_MODEL: string;
 
   // Telegram configuration
@@ -39,6 +41,11 @@ export interface Env {
 
   // OpenRouter configuration
   OPENROUTER_API_KEY: string;
+
+  // Cloudflare AI Gateway configuration
+  USE_CF_GATEWAY?: string;
+  CF_ACCOUNT_ID?: string;
+  CF_GATEWAY_ID?: string;
 }
 
 export interface Author {

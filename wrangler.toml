@@ -14,7 +14,10 @@ rules = [
 ENABLE_TELEGRAM = true
 ENABLE_FARCASTER = true
 ENABLE_TWITTER = false   # Twitter API
-LLM_MODEL = "openai/gpt-3.5-turbo"  # Model to use for LLM responses
+LLM_MODEL = "openai/gpt-4o-mini"  # Model to use for LLM responses
+USE_CF_GATEWAY = true  # Optional: Toggle for Cloudflare AI Gateway
+CF_ACCOUNT_ID = ""  # Optional: Cloudflare Account ID for AI gateway
+CF_GATEWAY_ID = ""  # Optional: Cloudflare Gateway ID
 
 # Cron Triggers
 [triggers]

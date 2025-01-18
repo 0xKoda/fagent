@@ -54,6 +54,11 @@ id = ""        # Add your KV namespace ID here
 preview_id = "" # Add your preview ID here
 ```
 
+## AI Gateway
+This is an optional feature that can be set inside your wrangler.toml with `USE_CF_GATEWAY = true  # Toggle for Cloudflare AI Gateway`
+
+Cloudflare AI Gateway provides centralized visibility and control for your AI applications. Enable AI gateway in your Cloudflare dashboard, create a gateway ID, and add the variables to the wrangler.toml. This will enable features like cost tracking across OpenRouter calls, observability, caching and evals.
+
 ## Features
 
 - Multi-platform support (Twitter, Telegram, Farcaster)
@@ -129,6 +134,9 @@ Configure platform settings in `wrangler.toml`:
 ENABLE_FARCASTER = true         # Enable/disable Farcaster
 ENABLE_TELEGRAM = true          # Enable/disable Telegram
 ENABLE_TWITTER = false          # Enable Twitter API client
+USE_CF_GATEWAY = true  # Optional: Toggle for Cloudflare AI Gateway
+CF_ACCOUNT_ID = ""  # Optional: Cloudflare Account ID for AI gateway
+CF_GATEWAY_ID = ""  # Optional: Cloudflare Gateway ID
 ```
 
 ## Creating Scheduled Jobs

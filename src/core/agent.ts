@@ -26,9 +26,9 @@ export class Agent {
 
   constructor(env: Env) {
     this.env = env;
-    this.memory = new Memory({ agent_memory: env.agent_memory });
+    this.memory = new Memory(env);
     this.character = character;
-    this.actions = loadActions();
+    this.actions = loadActions(env);
     
     // Initialize actions with env
     Object.values(this.actions).forEach(action => action.setEnv(env));
@@ -93,7 +93,7 @@ export class Agent {
 
   updateEnv(env: Env) {
     this.env = env;
-    this.memory = new Memory({ agent_memory: env.agent_memory });
+    this.memory = new Memory(env);
     
     // Update actions with new env
     Object.values(this.actions).forEach(action => action.setEnv(env));
@@ -278,11 +278,10 @@ export class Agent {
   }
 
   async publishFarcasterCast(text: string): Promise<void> {
-    if (this.farcaster) {
-      await this.farcaster.publishCast(text, null);
-    } else {
-      throw new Error('Farcaster client not initialized');
+    if (!this.farcaster) {
+      this.farcaster = await this.initializeFarcasterClient();
     }
+    await this.farcaster.publishCast(text, null);
   }
 
   private getTwitterClient(): TwitterClient {
@@ -331,21 +330,37 @@ export class Agent {
     return response;
   }
 
-  // Make public for use by scheduled jobs
   async generateLLMResponse(messages: any[], platform: string): Promise<string> {
     Logger.debug('Generating LLM response:', { messages });
 
-    // Modify the last message (user prompt) to include character limit
-    if (messages.length > 0 && messages[messages.length - 1].role === 'user') {
-      const lastMessage = messages[messages.length - 1];
-      switch (platform) {
-        case 'twitter':
-          lastMessage.content += '\n\nIMPORTANT: Your response MUST be under 250 characters.';
-          break;
-        case 'farcaster':
-          lastMessage.content += '\n\nIMPORTANT: Your response MUST be under 500 characters.';
-          break;
-      }
+    // Configure response based on platform
+    let maxTokens = 800;  // Default for standard responses
+    let characterLimit = 2000;
+
+    switch (platform) {
+      case 'twitter':
+      case 'farcaster':
+      case 'short':
+        maxTokens = 250;
+        characterLimit = 250;
+        // Add character limit reminder for social posts
+        if (messages.length > 0 && messages[messages.length - 1].role === 'user') {
+          messages[messages.length - 1].content += '\n\nIMPORTANT: Your response MUST be under 250 characters. No hashtags or emojis.';
+        }
+        break;
+      case 'telegram':
+        maxTokens = 300;  // Short telegram updates
+        characterLimit = 300;
+        break;
+      case 'telegram-sara':  // Special case for SARA's scheduled tweet
+      case 'long':
+        maxTokens = 1000;
+        characterLimit = 4096;
+        break;
+      case 'thesis':
+        maxTokens = 1000;
+        characterLimit = 4000;
+        break;
     }
 
     const apiKey = this.env.OPENROUTER_API_KEY;
@@ -353,16 +368,23 @@ export class Agent {
       throw new Error('Missing OpenRouter API key');
     }
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const useCfGateway = this.env.USE_CF_GATEWAY === 'true';
+    const baseUrl = useCfGateway 
+      ? `https://gateway.ai.cloudflare.com/v1/${this.env.CF_ACCOUNT_ID}/${this.env.CF_GATEWAY_ID}/openrouter/v1/chat/completions`
+      : 'https://openrouter.ai/api/v1/chat/completions';
+    
+    console.log(`Using URL for LLM requests: ${baseUrl}`);
+
+    const response = await fetch(baseUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: this.env.LLM_MODEL || 'openai/gpt-3.5-turbo',
+        model: this.env.LLM_MODEL || 'openai/gpt-4o-mini',
         messages,
-        max_tokens: 400,
+        max_tokens: maxTokens,
         temperature: 0.7
       })
     });
@@ -372,23 +394,11 @@ export class Agent {
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    const content = data.choices[0].message.content.trim();
+    Logger.info(`Generated ${platform} response with ${maxTokens} max tokens, content length: ${content.length}`);
 
-    // Apply platform-specific character limits
-    switch (platform) {
-      case 'telegram':
-        // Telegram has a 4096 character limit
-        return content.length > 2000 ? content.slice(0, 1997) + '...' : content;
-      case 'twitter':
-        // Twitter has a 280 character limit
-        return content.length > 280 ? content.slice(0, 277) + '...' : content;
-      case 'farcaster':
-        // Farcaster has a 700 character limit
-        return content.length > 700 ? content.slice(0, 697) + '...' : content;
-      default:
-        Logger.warn('Unknown platform, no character limit applied:', platform);
-        return content;
-    }
+    // Apply character limits
+    return content.length > characterLimit ? content.slice(0, characterLimit - 3) + '...' : content;
   }
 
   private async getConversationId(message: Message): Promise<string> {
